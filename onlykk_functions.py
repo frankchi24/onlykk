@@ -8,34 +8,32 @@ import sqlite3
 import re
 import nltk
 
-def distinguish(my_list,my_dictionary):
-	for stuff in my_list:
-		if re.search(r'\w+\s\w+',stuff):
-			tokens = nltk.word_tokenize(stuff)
-			query_database(tokens,my_dictionary,True)
-		else:
-			query_database(stuff,my_dictionary,False)
-
-
-def query_database(my_stem,my_dictionary,phrases):
-	conn = sqlite3.connect('test.db')
-	c = conn.cursor()
-	conn.text_factory = str
-	if phrases == False:
+def get_kk(my_stem,my_dictionary,phrases,table_name,cursor):
+	if phrases == False: 
 		t = (my_stem.lower(),)
-		rows = c.execute('SELECT * FROM common_words_chinese WHERE stem=?', t) 	
-		for row in rows:
-			my_dictionary[row[1]] = row[2]
-	elif phrases == True:
-		stem_dic = ""
-		kk_dic = ""
-		for stuff in my_stem:
-			t = (stuff.encode('utf8'),)
-			rows = c.execute('SELECT * FROM common_words_chinese WHERE stem=?', t)
+		try:		
+			rows = cursor.execute('SELECT * FROM {} WHERE stem=?'.format(table_name), t)
 			for row in rows:
-				stem_dic = stem_dic + " " + str(row[1])
-				kk_dic = kk_dic + " " + str(row[2]) 			
-		my_dictionary[stem_dic[1:]] = kk_dic[1:]
-
+				my_dictionary[my_stem] = row[2]
+		
+		except KeyError:
+			my_dictionary[my_stem] = "" 	
+		
+		return my_dictionary
+	
+	elif phrases == True:
+		kk_dic = ""
+		stem_string = ""
+		for token in my_stem:
+			t = (token,)
+			try:
+				rows = cursor.execute('SELECT * FROM {} WHERE stem=?'.format(table_name), t)
+				for row in rows:
+					kk_dic = kk_dic + " " + str(row[2])
+			except KeyError:
+				pass 			
+			stem_string = stem_string + ' ' + str(token)
+		my_dictionary[stem_string[1:]] = kk_dic[1:]	
+		return my_dictionary
 
 

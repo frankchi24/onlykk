@@ -8,9 +8,14 @@ import sqlite3
 import re
 import nltk
 import opencc
-from onlykk_functions import query_database,distinguish
+from onlykk_functions import get_kk
 
 #goals:from a column of csv getting kk,meaning
+
+
+
+#get kk from the database
+
 
 #import from excel file,getting a list of string
 #import from csv,getting a list of string
@@ -25,13 +30,29 @@ dics = {}
 dics.setdefault('stem', 'kk')
 
 # #distingusih between words and phrases
-# if it's a word,stem it and return get the kk and meaning
-# if it's a phrase, tokenize them, stem them and return kk
+# stem words and return get the kk and meaning
+# tokenize phrases, stem them and return kk
+database_name = 'test.db'
+table_name = 'common_words_chinese'
 
-distinguish(words_phrases,dics)
-	
-#getting the kk and meaning from api
 
+conn = sqlite3.connect(database_name)
+conn.text_factory = str #beore cursor or after cursor
+c = conn.cursor()
+
+phrases = True
+for stuff in words_phrases:
+	if re.search(r'\w+\s\w+',stuff):
+		stuff = nltk.word_tokenize(stuff)
+		get_kk(stuff,dics,True,table_name,c)
+	elif re.search(r'\w+\s\w+',stuff) == None:
+		get_kk(stuff,dics,False,table_name,c)
+
+print dics['next']
+print dics['watch TV']
+# print dics['scotter']
+
+#if no results,get the kk and meaning from api, save the new stuff to the database
 
 #create a excel file
 wb = openpyxl.Workbook()
@@ -39,27 +60,32 @@ wb.get_sheet_names()
 sheet = wb.active
 sheet.title = "Cool_Stuff"
 sheet = wb.get_sheet_by_name('Cool_Stuff')
-x = 1
+
+
 
 no_result = []
-for stem in words_phrases:
+results = []
+
+for stuff in words_phrases:
+	results.append(stuff)
 	try:
-		sheet['A%d'%x] = stem
-		sheet['B%d'%x] = dics['%s'%(stem.lower())]
-		conn = sqlite3.connect('test.db')
-		c = conn.cursor()
-		t = (stem.lower(),)
-		rows = c.execute('SELECT * FROM common_words_chinese WHERE stem=?', t)  
-		for row in rows:
-			sheet['C%d'%x] = row[3]
-			sheet['D%d'%x] = row[4]
-			sheet['E%d'%x] = row[5]
-			sheet['F%d'%x] = row[6]
-		x = x + 1
+		results.append(dics[stuff])
 	except KeyError:
-		sheet['A%d'%x] = stem
-		no_result.append(stem)
-		x = x + 1	
+		pass
+	try:
+		stuff = stuff.lower()
+		rows = c.execute('SELECT * FROM {} WHERE stem = ?'.format(table_name), (stuff,))
+	except KeyError:
+		pass
+	for row in rows:
+		for last in row[3:]:
+			if last != '' and last!= None:
+				print last
+				results.append(last)
+
+	
+	sheet.append(results)
+	results = []
 
 wb.save('example.xlsx')
 
