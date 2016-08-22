@@ -2,41 +2,6 @@
 import sqlite3
 import opencc
 import re
-#transfer database string from simplified chinses to traditional chinese
-# sample code using opencc
-# x = opencc.convert('我是傳奇我好忙')
-# y = opencc.convert('乾坤一掷', config='s2tw.json')
-
-def simplified_to_traditional(rows_count,columns_count,table_name,database_name):
-    conn = sqlite3.connect(database_name)
-    conn.text_factory = str
-    c = conn.cursor()
-    x = 1
-    y = 1
-    table = table_name
-
-    while y < columns_count:
-        while x < rows_count:
-            column = 'meaning%s'%(str(y))
-            arg = (x,)
-            rows = c.execute('SELECT {} FROM {} WHERE id=?'.format(column, table), arg)
-            
-            for row in rows:
-                holder = opencc.convert(row[0], config='s2tw.json')
-            
-            print holder        
-            arg2 = (holder,x)
-            
-            c.execute('UPDATE {} SET {} = ? WHERE id= ?'.format(table,column),arg2) 
-            #weird placeholder methiod
-            x = x + 1
-        x = 1
-        y = y + 1
-    
-    conn.commit()
-    c.close()
-    conn.close()
-
 
 def create_table_sorted(name):
     c.execute('''CREATE TABLE {}(  
